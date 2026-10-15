@@ -4,7 +4,7 @@ Make inventory background tiers agree with Show Me The Money's main tooltip valu
 
 ## Release status
 
-Release candidate, not yet published. Earlier 1.0.5 behavior was user-confirmed working. Versions 1.0.6 and 1.0.7 passed static/policy checks, but their performance and automatic-refresh changes still require in-game verification. No clean-install test has been recorded. Compatibility with other SPT/SMTM versions is not established.
+On October 14, 2026, the user reported the latest version working as intended on two player clients connected to the same server. This is user-reported runtime validation; the exact tested package/hash, clean-install conditions and individual startup/post-raid/performance coverage were not recorded. The optimized release build and 97 policy assertions passed. Compatibility with other SPT/SMTM versions is not established.
 
 ## Requirements and deployment
 
@@ -35,6 +35,8 @@ To uninstall, exit the client, remove this DLL, and restart. Its optional config
 SMTM optional weapon-mod/armor-plate breakdown lines retain their original calculations. Item Valuation's static backend description strings remain historical template estimates and may differ. This mod does not change actual buy/sell prices or sale eligibility.
 
 ## Configuration
+
+**For penetration-based ammo coloring, enable Show Me The Money's ammo penetration color setting (`UseCaliberPenetrationPower`).** With it disabled, ammunition backgrounds and tooltip colors use price tiers instead.
 
 Edit `BepInEx/config/local.sptdiagnostics.pricecolorsync.cfg` while the client is closed, then restart. Defaults:
 
@@ -79,4 +81,4 @@ Development and documentation used OpenAI Codex assistance; earlier model IDs we
 
 License: MIT, covering the original Price Color Sync code and documentation only. Dependency and game licenses remain separate.
 
-Support: use the eventual mod listing's comments or source repository issues. Public support and source URLs must be assigned before publication.
+Source and support: https://github.com/FrostyJ1m/PriceColorSync and https://github.com/FrostyJ1m/PriceColorSync/issues. Forge listing: https://sp-mod.com/mod/3151/price-color-sync (unpublished during preparation).
