@@ -23,7 +23,7 @@ using SwiftXP.SPT.Common.Sessions;
 
 namespace SptDiagnostics.PriceColorSync
 {
-    [BepInPlugin("local.sptdiagnostics.pricecolorsync", "FrostyJim-PriceColorSync", "1.0.8")]
+    [BepInPlugin("local.sptdiagnostics.pricecolorsync", "GPTSol6-1-PriceColorSync", "1.0.8")]
     [BepInDependency("com.dark.spt.showmethemoney", "3.0.2")]
     [BepInIncompatibility("com.fika.headless")]
     public sealed class PriceColorSyncPlugin : BaseUnityPlugin

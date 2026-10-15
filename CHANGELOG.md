@@ -1,6 +1,7 @@
 # Changelog
 
 ## 1.0.8 - 2026-10-15
+- Update plugin display-name prefix to GPTSol6-1 following the author profile rename; GUID/configuration path unchanged.
 - FIR items using flea estimates now compare against the best trader sell-to quote and use the higher valid SMTM rouble-per-slot value, including configured currency/tax handling. Ties retain flea.
 - Fall back to the valid quote when the other source is unavailable; keep trader-winning quotes responsive to replacement flea snapshots.
 - Main tooltip, selected source and price-based background tier follow the winning quote. Existing non-FIR, flea-ban, ammo and case-only rules remain.

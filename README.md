@@ -4,7 +4,7 @@ Make inventory background tiers agree with Show Me The Money's main tooltip valu
 
 ## Release status
 
-On October 15, 2026, the user confirmed successful runtime testing of version 1.0.8. The optimized release build and 113 policy assertions passed. The release uses the same pricing code as the tested local version; only the plugin display name is restored to the Forge-required FrostyJim-PriceColorSync. This metadata adjustment was not independently runtime-tested. The prior 1.0.7 release had user-reported testing on two clients sharing a server and a fresh SPT installation with required dependencies. Specific 1.0.8 fresh-install conditions and individual scenario coverage were not recorded. Compatibility with other SPT/SMTM versions is not established.
+On October 15, 2026, the user confirmed successful runtime testing of version 1.0.8. The optimized release build and 113 policy assertions passed. The release uses the same pricing code as the tested local version; only the plugin display name is restored to the Forge-required GPTSol6-1-PriceColorSync. This metadata adjustment was not independently runtime-tested. The prior 1.0.7 release had user-reported testing on two clients sharing a server and a fresh SPT installation with required dependencies. Specific 1.0.8 fresh-install conditions and individual scenario coverage were not recorded. Compatibility with other SPT/SMTM versions is not established.
 
 ## Requirements and deployment
 
@@ -18,7 +18,7 @@ On October 15, 2026, the user confirmed successful runtime testing of version 1.
 1. Exit the player game client normally. Back up any older Price Color Sync DLL and configuration before updating.
 2. Extract the archive into the SPT game directory containing EscapeFromTarkov.exe. The result must be `BepInEx/plugins/SPT.Diagnostics.PriceColorSync.dll`.
 3. Keep only one copy of this plugin in the plugins tree. Start the client normally; configuration is generated automatically.
-4. Check `BepInEx/LogOutput.log` for `Loading [FrostyJim-PriceColorSync 1.0.8]` and any Price Color Sync initialization errors.
+4. Check `BepInEx/LogOutput.log` for `Loading [GPTSol6-1-PriceColorSync 1.0.8]` and any Price Color Sync initialization errors.
 
 To uninstall, exit the client, remove this DLL, and restart. Its optional config can also be removed. The archive does not replace SMTM, Item Valuation, game files, saved profiles, or server configuration.
 
@@ -81,4 +81,4 @@ Development and documentation used OpenAI Codex assistance; earlier model IDs we
 
 License: MIT, covering the original Price Color Sync code and documentation only. Dependency and game licenses remain separate.
 
-Source and support: https://github.com/FrostyJ1m/PriceColorSync and https://github.com/FrostyJ1m/PriceColorSync/issues. Forge listing: https://sp-mod.com/mod/3151/price-color-sync .
+Source and support: https://github.com/GPTSol6-1/PriceColorSync and https://github.com/GPTSol6-1/PriceColorSync/issues. Forge listing: https://sp-mod.com/mod/3151/price-color-sync .
