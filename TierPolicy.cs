@@ -4,6 +4,18 @@ namespace SptDiagnostics.PriceColorSync
 {
     public static class TierPolicy
     {
+        public static bool IsValidPrice(double? value)
+        {
+            return value.HasValue && !Double.IsNaN(value.Value)
+                && !Double.IsInfinity(value.Value) && value.Value >= 0;
+        }
+
+        public static bool PreferTrader(double? flea, double? trader)
+        {
+            // Preserve the flea source on ties; use an available trader if flea is missing.
+            return IsValidPrice(trader) && (!IsValidPrice(flea) || trader.Value > flea.Value);
+        }
+
         public static string PriceSource(bool foundInRaid, bool fleaEligible,
             bool fleaForFir = true, bool fleaForNonFir = false, bool traderForBanned = true)
         {

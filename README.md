@@ -1,10 +1,10 @@
-# Price Color Sync 1.0.7
+# Price Color Sync 1.0.8
 
 Make inventory background tiers agree with Show Me The Money's main tooltip valuation. Player-client plugin for SPT 4.1.6 and Show Me The Money 3.0.2.
 
 ## Release status
 
-On October 14, 2026, the user reported the latest version working as intended on two player clients connected to the same server. The user also confirmed successful testing on a fresh SPT installation with the required dependencies. This is user-reported runtime validation; the exact tested package/hash and individual startup/post-raid/performance coverage were not independently recorded. The optimized release build and 97 policy assertions passed. Compatibility with other SPT/SMTM versions is not established.
+On October 15, 2026, the user confirmed successful runtime testing of version 1.0.8. The optimized release build and 113 policy assertions passed. The release uses the same pricing code as the tested local version; only the plugin display name is restored to the Forge-required FrostyJim-PriceColorSync. This metadata adjustment was not independently runtime-tested. The prior 1.0.7 release had user-reported testing on two clients sharing a server and a fresh SPT installation with required dependencies. Specific 1.0.8 fresh-install conditions and individual scenario coverage were not recorded. Compatibility with other SPT/SMTM versions is not established.
 
 ## Requirements and deployment
 
@@ -18,18 +18,18 @@ On October 14, 2026, the user reported the latest version working as intended on
 1. Exit the player game client normally. Back up any older Price Color Sync DLL and configuration before updating.
 2. Extract the archive into the SPT game directory containing EscapeFromTarkov.exe. The result must be `BepInEx/plugins/SPT.Diagnostics.PriceColorSync.dll`.
 3. Keep only one copy of this plugin in the plugins tree. Start the client normally; configuration is generated automatically.
-4. Check `BepInEx/LogOutput.log` for `Loading [FrostyJim-PriceColorSync 1.0.7]` and any Price Color Sync initialization errors.
+4. Check `BepInEx/LogOutput.log` for `Loading [FrostyJim-PriceColorSync 1.0.8]` and any Price Color Sync initialization errors.
 
 To uninstall, exit the client, remove this DLL, and restart. Its optional config can also be removed. The archive does not replace SMTM, Item Valuation, game files, saved profiles, or server configuration.
 
 ## Pricing and colors
 
-- Found-in-raid (FIR), flea-eligible items use SMTM's cached flea estimate. Non-FIR and flea-banned items use the best available trader price by default.
+- Found-in-raid (FIR), flea-eligible items compare SMTM's cached flea estimate with its best trader sell-to value and use the higher valid rouble-per-slot quote, including configured tax/currency handling. Equal values keep flea. A missing or invalid quote falls back to the other valid source. Non-FIR and flea-banned items use the best available trader price by default.
 - Storage cases are priced as empty cases, excluding contents without changing the live inventory. Filled-case tooltips show `(case only)`.
 - Background and main tooltip share a cached item valuation and tier. Price-per-slot tiers default to 5,000 / 10,000 / 15,000 / 25,000 / 35,000 roubles through SMTM settings.
 - Ammunition and populated cartridge packs use SMTM's penetration tiers when enabled. Disable that SMTM option to use price tiers. Empty cartridge packs use a neutral background when no penetration sample exists.
 - Flea-banned templates have a red background, independently of tooltip price tiers. Ammunition and cartridge packs are exempt from this red marker; storage ammo cases are not.
-- Background colors are dark; SMTM tooltip colors remain independent. Missing flea estimates receive a neutral background rather than silently switching to trader estimates.
+- Background colors are dark; SMTM tooltip colors remain independent. When neither eligible quote is valid, valuation remains unavailable with a neutral background.
 - Recoloring is queued with item/time limits; other unopened items refresh on their next UI update or hover. Selection/highlight effects can temporarily override normal backgrounds.
 
 SMTM optional weapon-mod/armor-plate breakdown lines retain their original calculations. Item Valuation's static backend description strings remain historical template estimates and may differ. This mod does not change actual buy/sell prices or sale eligibility.
@@ -51,7 +51,7 @@ Maximum items per frame = 12
 Background work budget milliseconds = 2
 ```
 
-The flea-ban override takes precedence over both FIR options. Set both flea-estimate options false for trader-only pricing. Background tier RGB colors and the flea-ban marker are configurable in this file.
+Use flea estimates for FIR items enables higher-of-flea/trader selection. A trader winner still refreshes when flea snapshots change. The flea-ban override takes precedence over both FIR options. Set both flea-estimate options false for trader-only pricing. Background tier RGB colors and the flea-ban marker are configurable in this file.
 
 SMTM's `BepInEx/config/com.dark.spt.showmethemoney.cfg` controls shared price/penetration thresholds, penetration mode, tooltip colors, trader exclusions, conversion/tax settings, and normal market refresh behavior. SMTM's dual-price and Always show flea price options do not override this plugin's single selected source.
 
@@ -81,4 +81,4 @@ Development and documentation used OpenAI Codex assistance; earlier model IDs we
 
 License: MIT, covering the original Price Color Sync code and documentation only. Dependency and game licenses remain separate.
 
-Source and support: https://github.com/FrostyJ1m/PriceColorSync and https://github.com/FrostyJ1m/PriceColorSync/issues. Forge listing: https://sp-mod.com/mod/3151/price-color-sync (unpublished during preparation).
+Source and support: https://github.com/FrostyJ1m/PriceColorSync and https://github.com/FrostyJ1m/PriceColorSync/issues. Forge listing: https://sp-mod.com/mod/3151/price-color-sync .

@@ -23,7 +23,7 @@ using SwiftXP.SPT.Common.Sessions;
 
 namespace SptDiagnostics.PriceColorSync
 {
-    [BepInPlugin("local.sptdiagnostics.pricecolorsync", "FrostyJim-PriceColorSync", "1.0.7")]
+    [BepInPlugin("local.sptdiagnostics.pricecolorsync", "FrostyJim-PriceColorSync", "1.0.8")]
     [BepInDependency("com.dark.spt.showmethemoney", "3.0.2")]
     [BepInIncompatibility("com.fika.headless")]
     public sealed class PriceColorSyncPlugin : BaseUnityPlugin
@@ -72,7 +72,7 @@ namespace SptDiagnostics.PriceColorSync
                 if (Background == null || OriginalBackground == null || AnimatorBackground == null || ShowPrice == null || WeaponPrice == null || SetFleaPrice == null)
                     throw new MissingMemberException("Installed UI/SMTM methods differ from inspected versions");
                 fleaForFir = Config.Bind("Pricing", "Use flea estimates for FIR items", true,
-                    "Use flea estimates for found-in-raid items. False uses best trader prices. Restart the client after changing.").Value;
+                    "Compare flea estimates with best trader sell prices for found-in-raid items and use the higher value. False uses best trader prices only. Restart the client after changing.").Value;
                 fleaForNonFir = Config.Bind("Pricing", "Use flea estimates for non-FIR items", false,
                     "Use flea estimates even for non-FIR items. False uses best trader prices. Restart the client after changing.").Value;
                 traderForBanned = Config.Bind("Pricing", "Use trader prices for flea-banned items", true,
@@ -96,7 +96,7 @@ namespace SptDiagnostics.PriceColorSync
                 withinBackgroundBudget = delegate { return backgroundTimer.Elapsed.TotalMilliseconds < backgroundBudgetMs; };
                 harmony.PatchAll(typeof(PriceColorSyncPlugin).Assembly);
                 Logger.LogInfo("Pricing: FIR flea=" + fleaForFir + "; non-FIR flea=" + fleaForNonFir
-                    + "; flea-banned trader=" + traderForBanned + ". Shared price and tier for tooltip/background.");
+                    + "; flea-banned trader=" + traderForBanned + ". FIR flea mode selects the higher flea/trader sell value. Shared price and tier for tooltip/background.");
                 Logger.LogInfo("Background updates: maximum " + maximumBackgroundItems + " items/frame; " + backgroundBudgetMs + " ms budget (checked between items).");
                 if (PriceUpdater == null) Logger.LogWarning("Automatic price refresh unavailable: SMTM updater field not found.");
                 else Logger.LogInfo("Automatic SMTM refresh: first main menu and main menu after each raid; updater checks every 30 seconds.");
@@ -199,6 +199,7 @@ namespace SptDiagnostics.PriceColorSync
             public float Expires;
             public bool Fir;
             public bool UsesFlea;
+            public bool DependsOnFlea;
             public bool FleaEligible;
             public object MarketSnapshot;
             public bool Dirty;
@@ -259,7 +260,7 @@ namespace SptDiagnostics.PriceColorSync
         private static bool NeedsQuote(Item item, Quote quote, bool interactive)
         {
             return quote.Trade == null || quote.Dirty || quote.Fir != item.MarkedAsSpawnedInSession
-                || (quote.UsesFlea && !ReferenceEquals(quote.MarketSnapshot, FleaPriceDataHolder.Current))
+                || (quote.DependsOnFlea && !ReferenceEquals(quote.MarketSnapshot, FleaPriceDataHolder.Current))
                 || (interactive && quote.Expires <= Time.unscaledTime);
         }
 
@@ -311,6 +312,8 @@ namespace SptDiagnostics.PriceColorSync
                 result.FleaEligible = pricingItem.CanSellOnRagfair;
                 result.UsesFlea = TierPolicy.PriceSource(result.Fir, result.FleaEligible,
                     fleaForFir, fleaForNonFir, traderForBanned) == "Flea";
+                // A trader-winning FIR quote must still be reconsidered after market refresh.
+                result.DependsOnFlea = result.UsesFlea;
                 result.Trade = new TradeItem(pricingItem, null, null);
                 if (result.UsesFlea)
                 {
@@ -320,23 +323,34 @@ namespace SptDiagnostics.PriceColorSync
                     if (result.Trade.FleaPrice == null && !result.FleaEligible)
                         EstimateBannedFleaItem(result.Trade);
                     result.Price = result.Trade.FleaPrice;
+                    if (result.Fir)
+                    {
+                        TraderPriceService.Instance.GetBestTraderPrice(result.Trade);
+                        if (TierPolicy.PreferTrader(ComparePrice(result.Price), ComparePrice(result.Trade.TraderPrice)))
+                        {
+                            result.Price = result.Trade.TraderPrice;
+                            result.UsesFlea = false;
+                        }
+                    }
                 }
                 else
                 {
                     TraderPriceService.Instance.GetBestTraderPrice(result.Trade);
                     result.Price = result.Trade.TraderPrice;
                 }
-                if (result.Price != null)
-                {
-                    double value = result.Price.GetComparePriceInRouble();
-                    if (!Double.IsNaN(value) && !Double.IsInfinity(value) && value >= 0) result.Compare = value;
-                }
+                result.Compare = ComparePrice(result.Price);
                 if (IsStorageCase(item) && LoggedCaseTemplates.Add(item.TemplateId))
                     Log.LogInfo("Case valuation: template=" + item.TemplateId + "; source=" + (result.UsesFlea ? "Flea" : "Trader")
                         + "; shell-only price/slot=" + (result.Compare.HasValue ? result.Compare.Value.ToString() : "unavailable"));
             }
             catch (Exception e) { Warn(e); }
             return result;
+        }
+
+        private static double? ComparePrice(TradePrice price)
+        {
+            double? value = price == null ? (double?)null : price.GetComparePriceInRouble();
+            return TierPolicy.IsValidPrice(value) ? value : null;
         }
 
         private static void EstimateBannedFleaItem(TradeItem trade)

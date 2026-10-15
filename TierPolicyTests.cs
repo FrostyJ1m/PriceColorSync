@@ -37,6 +37,23 @@ internal static class TierPolicyTests
             Equal(TierPolicy.Tier(-1, boundaries), -1);
         }
         Console.WriteLine("42 source-selection/tier-boundary/invalid-value assertions passed.");
+        Equal(TierPolicy.PreferTrader(10000, 15000), true);
+        Equal(TierPolicy.PreferTrader(15000, 10000), false);
+        Equal(TierPolicy.PreferTrader(10000, 10000), false);
+        Equal(TierPolicy.PreferTrader(null, 10000), true);
+        Equal(TierPolicy.PreferTrader(10000, null), false);
+        Equal(TierPolicy.PreferTrader(null, null), false);
+        Equal(TierPolicy.PreferTrader(Double.NaN, 10000), true);
+        Equal(TierPolicy.PreferTrader(Double.PositiveInfinity, 10000), true);
+        Equal(TierPolicy.PreferTrader(-1, 10000), true);
+        Equal(TierPolicy.PreferTrader(10000, Double.NaN), false);
+        Equal(TierPolicy.PreferTrader(10000, Double.PositiveInfinity), false);
+        Equal(TierPolicy.PreferTrader(10000, Double.NegativeInfinity), false);
+        Equal(TierPolicy.PreferTrader(10000, -1), false);
+        Equal(TierPolicy.PreferTrader(null, 0), true);
+        Equal(TierPolicy.PreferTrader(0, 0), false);
+        Equal(TierPolicy.PreferTrader(9999.5, 10000), true);
+        Console.WriteLine("16 best-value assertions passed: flea/trader winners, ties, missing/invalid quotes, zero and fractional values.");
         var queue = new BackgroundWorkQueue<int>();
         for (int i = 0; i < 1000; i++) { queue.Enqueue(i); queue.Enqueue(i); }
         Equal(queue.Count, 1000);
