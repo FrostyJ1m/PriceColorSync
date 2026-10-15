@@ -1,10 +1,10 @@
-# Price Color Sync 1.0.8
+# Price Color Sync 1.1.0
 
 Make inventory background tiers agree with Show Me The Money's main tooltip valuation. Player-client plugin for SPT 4.1.6 and Show Me The Money 3.0.2.
 
 ## Release status
 
-On October 15, 2026, the user confirmed successful runtime testing of version 1.0.8. The optimized release build and 113 policy assertions passed. The release uses the same pricing code as the tested local version; only the plugin display name is restored to the Forge-required GPTSol6-1-PriceColorSync. This metadata adjustment was not independently runtime-tested. The prior 1.0.7 release had user-reported testing on two clients sharing a server and a fresh SPT installation with required dependencies. Specific 1.0.8 fresh-install conditions and individual scenario coverage were not recorded. Compatibility with other SPT/SMTM versions is not established.
+On October 15, 2026, the user confirmed that items were already colored as soon as an inventory opened and reported no noticeable frame loss with the installed 1.1.0 build. The optimized release build passes 140 assertions. Release source differs from the tested development source only in the Forge-required author-prefixed plugin display name; this metadata adjustment was not independently runtime-tested. No profiler benchmark, exhaustive mutation/Fika coverage or fresh-install test of 1.1.0 was recorded. Compatibility with other SPT/SMTM versions is not established.
 
 ## Requirements and deployment
 
@@ -18,7 +18,7 @@ On October 15, 2026, the user confirmed successful runtime testing of version 1.
 1. Exit the player game client normally. Back up any older Price Color Sync DLL and configuration before updating.
 2. Extract the archive into the SPT game directory containing EscapeFromTarkov.exe. The result must be `BepInEx/plugins/SPT.Diagnostics.PriceColorSync.dll`.
 3. Keep only one copy of this plugin in the plugins tree. Start the client normally; configuration is generated automatically.
-4. Check `BepInEx/LogOutput.log` for `Loading [GPTSol6-1-PriceColorSync 1.0.8]` and any Price Color Sync initialization errors.
+4. Check `BepInEx/LogOutput.log` for `Loading [GPTSol6-1-PriceColorSync 1.1.0]` and any Price Color Sync initialization errors.
 
 To uninstall, exit the client, remove this DLL, and restart. Its optional config can also be removed. The archive does not replace SMTM, Item Valuation, game files, saved profiles, or server configuration.
 
@@ -30,7 +30,7 @@ To uninstall, exit the client, remove this DLL, and restart. Its optional config
 - Ammunition and populated cartridge packs use SMTM's penetration tiers when enabled. Disable that SMTM option to use price tiers. Empty cartridge packs use a neutral background when no penetration sample exists.
 - Flea-banned templates have a red background, independently of tooltip price tiers. Ammunition and cartridge packs are exempt from this red marker; storage ammo cases are not.
 - Background colors are dark; SMTM tooltip colors remain independent. When neither eligible quote is valid, valuation remains unavailable with a neutral background.
-- Recoloring is queued with item/time limits; other unopened items refresh on their next UI update or hover. Selection/highlight effects can temporarily override normal backgrounds.
+- Exact item quotes are prepared before UI display using the item/time queue. Creation, movement, refresh and FIR changes schedule work; replacement market snapshots and startup/post-raid refreshes reschedule known items. Valid quotes survive view recreation. An examined cold/stale item is priced before its first color draw. Selection/highlight effects can temporarily override normal backgrounds.
 
 SMTM optional weapon-mod/armor-plate breakdown lines retain their original calculations. Item Valuation's static backend description strings remain historical template estimates and may differ. This mod does not change actual buy/sell prices or sale eligibility.
 
@@ -55,7 +55,7 @@ Use flea estimates for FIR items enables higher-of-flea/trader selection. A trad
 
 SMTM's `BepInEx/config/com.dark.spt.showmethemoney.cfg` controls shared price/penetration thresholds, penetration mode, tooltip colors, trader exclusions, conversion/tax settings, and normal market refresh behavior. SMTM's dual-price and Always show flea price options do not override this plugin's single selected source.
 
-The work budget is checked between items; one expensive item can exceed it. Item cap accepts 1-64 and budget accepts 0.25-10 ms. These limits cover this queue, not total frame time.
+The work budget is checked between items; one expensive item can exceed it. Item cap accepts 1-64 and budget accepts 0.25-10 ms. These limits cover advance preparation, not total frame time. Synchronous cold/stale quotes at first display are outside this budget and can still cause a frame spike. Missing session/trader readiness or pricing data can delay or prevent a valid quote. Direct item changes made by another mod without the observed notifications may remain stale until tooltip refresh.
 
 ## Automatic refresh and network behavior
 

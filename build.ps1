@@ -1,7 +1,7 @@
 param([Parameter(Mandatory=$true)][string]$ClientPath)
 $ErrorActionPreference = 'Stop'
 $projectDir = $PSScriptRoot
-$clientDir = (Resolve-Path -LiteralPath $ClientPath).Path
+ $clientDir = (Resolve-Path -LiteralPath $ClientPath).Path
 $managedDir = Join-Path $clientDir 'EscapeFromTarkov_Data/Managed'
 $coreDir = Join-Path $clientDir 'BepInEx/core'
 $compilerPath = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
@@ -19,7 +19,7 @@ $references = @(
 )
 $compilerArgs = @('/nologo','/target:library','/optimize+',('/out:' + (Join-Path $outputDir 'SPT.Diagnostics.PriceColorSync.dll')))
 $compilerArgs += $references | ForEach-Object { '/reference:' + $_ }
-$compilerArgs += @((Join-Path $projectDir 'TierPolicy.cs'), (Join-Path $projectDir 'BackgroundWorkQueue.cs'), (Join-Path $projectDir 'MenuRefreshPolicy.cs'), (Join-Path $projectDir 'PriceColorSync.cs'))
+$compilerArgs += @((Join-Path $projectDir 'TierPolicy.cs'), (Join-Path $projectDir 'BackgroundWorkQueue.cs'), (Join-Path $projectDir 'ItemPreparationQueue.cs'), (Join-Path $projectDir 'MenuRefreshPolicy.cs'), (Join-Path $projectDir 'PriceColorSync.cs'))
 & $compilerPath @compilerArgs
 if ($LASTEXITCODE -ne 0) { throw 'Plugin compilation failed' }
 & $compilerPath /nologo /target:exe (('/out:' + (Join-Path $outputDir 'TierPolicyTests.exe'))) (Join-Path $projectDir 'TierPolicy.cs') (Join-Path $projectDir 'BackgroundWorkQueue.cs') (Join-Path $projectDir 'TierPolicyTests.cs')
@@ -30,3 +30,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Policy tests failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Menu refresh test compilation failed' }
 & (Join-Path $outputDir 'MenuRefreshPolicyTests.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Menu refresh policy tests failed' }
+& $compilerPath /nologo /target:exe (('/out:' + (Join-Path $outputDir 'ItemPreparationQueueTests.exe'))) (Join-Path $projectDir 'ItemPreparationQueue.cs') (Join-Path $projectDir 'ItemPreparationQueueTests.cs')
+if ($LASTEXITCODE -ne 0) { throw 'Item preparation test compilation failed' }
+& (Join-Path $outputDir 'ItemPreparationQueueTests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'Item preparation tests failed' }

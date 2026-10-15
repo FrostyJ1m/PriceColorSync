@@ -8,6 +8,6 @@ From this source directory:
 .\build.ps1 -ClientPath 'D:\Games\SPT'
 ```
 
-The script reads dependency assemblies from that directory, compiles `build/SPT.Diagnostics.PriceColorSync.dll`, and compiles/runs two pure policy test executables (82 valuation/queue assertions and 31 menu-lifecycle assertions). It does not install the DLL, change the game installation, or launch the game/server. Compiler errors or failed tests stop the build.
+The script reads dependency assemblies from that directory, compiles `build/SPT.Diagnostics.PriceColorSync.dll`, and compiles/runs three pure test executables (82 valuation/queue assertions, 31 menu-lifecycle assertions and 27 item-preparation assertions). It does not install the DLL, change the game installation, or launch the game/server. Compiler errors or failed tests stop the build.
 
-Copy the output DLL manually into the player's `BepInEx/plugins` directory only after backing up an older version. Runtime testing remains necessary. Do not commit or redistribute proprietary game or third-party assemblies. The plugin C# files are unchanged from the local 1.0.8 source except the Forge-required plugin display name; the release build script adds an explicit ClientPath parameter for independent builds.
+Copy the output DLL manually into the player's `BepInEx/plugins` directory only after backing up an older version. Runtime testing remains necessary. Do not commit or redistribute proprietary game or third-party assemblies. The plugin C# files are unchanged from the local 1.1.0 source except the Forge-required plugin display name; the release build script adds an explicit ClientPath parameter for independent builds.

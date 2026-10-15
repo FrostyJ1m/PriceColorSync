@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.0 - 2026-10-15
+
+- Prepare exact per-item valuations before inventories open, retaining condition, attachments and FIR status.
+- Reuse valid cached quotes when views reopen; creation, movement, refresh and FIR changes schedule preparation. Market snapshots and startup/post-raid refreshes reschedule known items.
+- Price an examined cold/stale item before its first color draw so it does not briefly display a provisional color.
+- Keep advance preparation on the main thread with existing item/time limits; weak tracking allows unused items to be collected and excludes pricing clones, trader stock and virtual roots.
+- Preserve higher-of-flea/trader FIR selection, case-only valuation, ammo penetration and flea-ban backgrounds.
+- User reports items are already colored when an inventory opens and no noticeable frame loss. Optimized build passes 140 assertions. This is user-reported testing, not a profiler benchmark or proof of every mutation/Fika scenario.
+
+
 ## 1.0.8 - 2026-10-15
 - Update plugin display-name prefix to GPTSol6-1 following the author profile rename; GUID/configuration path unchanged.
 - FIR items using flea estimates now compare against the best trader sell-to quote and use the higher valid SMTM rouble-per-slot value, including configured currency/tax handling. Ties retain flea.

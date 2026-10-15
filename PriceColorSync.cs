@@ -23,7 +23,7 @@ using SwiftXP.SPT.Common.Sessions;
 
 namespace SptDiagnostics.PriceColorSync
 {
-    [BepInPlugin("local.sptdiagnostics.pricecolorsync", "GPTSol6-1-PriceColorSync", "1.0.8")]
+    [BepInPlugin("local.sptdiagnostics.pricecolorsync", "GPTSol6-1-PriceColorSync", "1.1.0")]
     [BepInDependency("com.dark.spt.showmethemoney", "3.0.2")]
     [BepInIncompatibility("com.fika.headless")]
     public sealed class PriceColorSyncPlugin : BaseUnityPlugin
@@ -46,9 +46,14 @@ namespace SptDiagnostics.PriceColorSync
         private static bool fleaForFir;
         private static bool fleaForNonFir;
         private static bool traderForBanned;
+        [ThreadStatic] private static int pricingDepth;
+        private static volatile bool captureItems;
+        private static int valuationEpoch;
+        private static long preparedCount;
+        private static long coldViewCount;
         private static readonly Dictionary<Item, HashSet<ItemView>> ItemViews = new Dictionary<Item, HashSet<ItemView>>();
         private static readonly ConditionalWeakTable<ItemView, ViewState> ViewStates = new ConditionalWeakTable<ItemView, ViewState>();
-        private static readonly BackgroundWorkQueue<Item> PendingBackgrounds = new BackgroundWorkQueue<Item>();
+        private static readonly ItemPreparationQueue<Item> PendingBackgrounds = new ItemPreparationQueue<Item>();
         private static readonly ConditionalWeakTable<Item, Quote> Quotes = new ConditionalWeakTable<Item, Quote>();
         private static readonly FieldInfo Background = AccessTools.Field(typeof(ItemView), "BackgroundColor");
         private static readonly FieldInfo OriginalBackground = AccessTools.Field(typeof(ItemView), "OriginalBackgroundColor");
@@ -78,10 +83,10 @@ namespace SptDiagnostics.PriceColorSync
                 traderForBanned = Config.Bind("Pricing", "Use trader prices for flea-banned items", true,
                     "Override both FIR rules for items that cannot be sold on the flea market. Cases check only the case itself. False permits cached market estimates. Restart the client after changing.").Value;
                 maximumBackgroundItems = Config.Bind("Performance", "Maximum items per frame", 12,
-                    new ConfigDescription("Maximum queued item color updates per frame. Higher values shorten first-open settling when the time budget permits. Restart the client after changing.",
+                    new ConfigDescription("Maximum item quotes prepared ahead of display per frame. Cold first-display quotes run synchronously outside this limit. Restart the client after changing.",
                         new AcceptableValueRange<int>(1, 64))).Value;
                 backgroundBudgetMs = Config.Bind("Performance", "Background work budget milliseconds", 2f,
-                    new ConfigDescription("Time budget for queued pricing and recoloring per frame, checked between items. One item always runs and may exceed this budget. Restart the client after changing.",
+                    new ConfigDescription("Time budget for advance preparation and recoloring per frame, checked between items. One item may exceed it. Cold first-display quotes are outside this budget. Restart the client after changing.",
                         new AcceptableValueRange<float>(0.25f, 10f))).Value;
                 for (int i = 0; i < 6; i++)
                 {
@@ -95,14 +100,16 @@ namespace SptDiagnostics.PriceColorSync
                 processBackground = ProcessBackground;
                 withinBackgroundBudget = delegate { return backgroundTimer.Elapsed.TotalMilliseconds < backgroundBudgetMs; };
                 harmony.PatchAll(typeof(PriceColorSyncPlugin).Assembly);
+                captureItems = true;
                 Logger.LogInfo("Pricing: FIR flea=" + fleaForFir + "; non-FIR flea=" + fleaForNonFir
                     + "; flea-banned trader=" + traderForBanned + ". FIR flea mode selects the higher flea/trader sell value. Shared price and tier for tooltip/background.");
-                Logger.LogInfo("Background updates: maximum " + maximumBackgroundItems + " items/frame; " + backgroundBudgetMs + " ms budget (checked between items).");
+                Logger.LogInfo("Item preparation: maximum " + maximumBackgroundItems + " items/frame; " + backgroundBudgetMs + " ms budget. Exact cold quotes are calculated before first display.");
                 if (PriceUpdater == null) Logger.LogWarning("Automatic price refresh unavailable: SMTM updater field not found.");
                 else Logger.LogInfo("Automatic SMTM refresh: first main menu and main menu after each raid; updater checks every 30 seconds.");
             }
             catch (Exception e)
             {
+                captureItems = false;
                 if (harmony != null) harmony.UnpatchSelf();
                 enabled = false;
                 Logger.LogError("Price Color Sync disabled: " + e);
@@ -121,13 +128,12 @@ namespace SptDiagnostics.PriceColorSync
             if (!ReferenceEquals(snapshot, lastMarketSnapshot))
             {
                 lastMarketSnapshot = snapshot;
-                foreach (Item item in ItemViews.Keys)
-                    if ((item.MarkedAsSpawnedInSession ? fleaForFir : fleaForNonFir)
-                        && (!IsAmmo(item) || (Settings != null && !Settings.UseCaliberPenetrationPower.Value))) PendingBackgrounds.Enqueue(item);
+                valuationEpoch++;
+                PendingBackgrounds.ScheduleAll();
             }
-            // No full-stash polling or periodic trader recalculation. Spread initial/dirty
-            // background work across frames with both item and elapsed-time limits;
-            // tooltip prices remain synchronous for one item.
+            // Prepare real item instances even when no inventory UI exists. Factory hooks
+            // only enqueue; all pricing stays on the main thread after session readiness.
+            if (!PricingReady) return;
             if (PendingBackgrounds.Count == 0) return;
             backgroundTimer.Restart();
             try { PendingBackgrounds.Process(maximumBackgroundItems, processBackground, withinBackgroundBudget); }
@@ -136,10 +142,12 @@ namespace SptDiagnostics.PriceColorSync
 
         private void OnDestroy()
         {
+            captureItems = false;
             instance = null;
             if (harmony != null) harmony.UnpatchSelf();
             ItemViews.Clear();
             PendingBackgrounds.Clear();
+            if (Log != null) Log.LogInfo("Preparation totals: " + preparedCount + " background quotes; " + coldViewCount + " cold/stale first-display quotes.");
         }
 
         private void UpdateMenuRefresh()
@@ -158,6 +166,8 @@ namespace SptDiagnostics.PriceColorSync
                 if (updater == null) return;
                 requestedMarketSnapshot = FleaPriceDataHolder.Current;
                 updater.ForceUpdate();
+                valuationEpoch++;
+                PendingBackgrounds.ScheduleAll();
                 awaitingMarketRefresh = true;
                 menuRefresh.Requested();
                 Logger.LogInfo("Automatic SMTM refresh requested: " + reason + ". Waiting for SMTM updater (up to about 30 seconds plus request time).");
@@ -204,6 +214,8 @@ namespace SptDiagnostics.PriceColorSync
             public object MarketSnapshot;
             public bool Dirty;
             public int Generation;
+            public int Epoch;
+            public long Revision;
         }
 
         private sealed class ViewState
@@ -260,19 +272,65 @@ namespace SptDiagnostics.PriceColorSync
         private static bool NeedsQuote(Item item, Quote quote, bool interactive)
         {
             return quote.Trade == null || quote.Dirty || quote.Fir != item.MarkedAsSpawnedInSession
+                || quote.Epoch != valuationEpoch || quote.Revision != PendingBackgrounds.Revision(item)
                 || (quote.DependsOnFlea && !ReferenceEquals(quote.MarketSnapshot, FleaPriceDataHolder.Current))
                 || (interactive && quote.Expires <= Time.unscaledTime);
         }
 
         private static void ProcessBackground(Item item)
         {
-            HashSet<ItemView> views;
-            if (!ItemViews.TryGetValue(item, out views)) return;
-            bool active = false;
-            foreach (ItemView view in views) if (view != null && view.isActiveAndEnabled) { active = true; break; }
-            if (!active) return;
+            // Skip temporary trader stock and detached clones. Real instances become
+            // owned after deserialization; a view can still quote an unowned item later.
+            if (item is Stash || item is InventoryEquipment || item is LootContainer
+                || item is MobContainer || item is Pockets || item is HideoutAreaContainer
+                || item is StationaryContainer) return;
+            if (item.Owner == null || item.Owner.OwnerType == EOwnerType.Trader) return;
+            if (IsAmmo(item) && Settings.UseCaliberPenetrationPower.Value) return;
+            Quote previous = Quotes.GetOrCreateValue(item);
+            bool needed = NeedsQuote(item, previous, false);
             Quote quote = GetQuote(item, false);
+            if (needed) preparedCount++;
             RefreshItemViews(item, quote);
+        }
+
+        private static bool PricingReady
+        {
+            get { return Settings != null && Settings.EnablePlugin.Value && SptSession.Session != null
+                && SptSession.Session.Profile != null && SptSession.Session.Traders != null
+                && SptSession.Session.Traders.Any(); }
+        }
+
+        private static void ItemChanged(Item item)
+        {
+            if (pricingDepth != 0 || !captureItems || item == null) return;
+            PendingBackgrounds.Schedule(item, true);
+            // Refresh weapon/armor parents when parts move or change condition. Storage
+            // cases intentionally retain their shell-only quote when contents change.
+            // onlyMerged=true stops at inventory grids, avoiding pricing the entire
+            // stash/backpack when one contained item changes.
+            try
+            {
+                foreach (Item parent in item.GetAllParentItems(true))
+                    if (!IsStorageCase(parent)) PendingBackgrounds.Schedule(parent, true);
+            }
+            catch (Exception e)
+            {
+                // A malformed/transitional address must not interrupt the game's event.
+                // Hooks may run off-thread, so avoid Unity Time/Component APIs here.
+                if (Log != null) Log.LogWarning("Item preparation could not invalidate parent quotes: " + e.GetType().Name);
+            }
+        }
+
+        private static void PrepareFirstDisplay(ItemView view)
+        {
+            if (view == null || view.Item == null || !view.Examined || !PricingReady) return;
+            if (IsAmmo(view.Item) && Settings.UseCaliberPenetrationPower.Value) return;
+            Quote quote = Quotes.GetOrCreateValue(view.Item);
+            if (!NeedsQuote(view.Item, quote, false)) return;
+            // Rare cold/changed items must be priced before UpdateStaticInfo calls
+            // UpdateColor. Never substitute a template average for the actual item.
+            coldViewCount++;
+            GetQuote(view.Item, false);
         }
 
         private static void RefreshItemViews(Item item, Quote quote)
@@ -305,7 +363,10 @@ namespace SptDiagnostics.PriceColorSync
             result.Expires = Time.unscaledTime + 1f;
             result.Dirty = false;
             result.Generation++;
+            result.Epoch = valuationEpoch;
+            result.Revision = PendingBackgrounds.Revision(item);
             if (Settings == null) return result;
+            pricingDepth++;
             try
             {
                 Item pricingItem = IsStorageCase(item) ? CreateCasePricingShell(item) : item;
@@ -343,7 +404,8 @@ namespace SptDiagnostics.PriceColorSync
                     Log.LogInfo("Case valuation: template=" + item.TemplateId + "; source=" + (result.UsesFlea ? "Flea" : "Trader")
                         + "; shell-only price/slot=" + (result.Compare.HasValue ? result.Compare.Value.ToString() : "unavailable"));
             }
-            catch (Exception e) { Warn(e); }
+            catch (Exception e) { result.Dirty = true; Warn(e); }
+            finally { pricingDepth--; }
             return result;
         }
 
@@ -400,7 +462,7 @@ namespace SptDiagnostics.PriceColorSync
                 // UI repaint events never perform price calculations. Ammo backgrounds
                 // need only penetration; other missing/stale quotes go to the limited queue.
                 bool pending = (!IsAmmo(view.Item) || !Settings.UseCaliberPenetrationPower.Value) && NeedsQuote(view.Item, quote, false);
-                if (pending) PendingBackgrounds.Enqueue(view.Item);
+                if (pending) PendingBackgrounds.Schedule(view.Item, false);
                 int tier = GetTier(view.Item, quote);
                 // Item Valuation's ban marker is template-based. This also works before
                 // quotes settle without calculating prices or traversing contained items
@@ -419,15 +481,55 @@ namespace SptDiagnostics.PriceColorSync
         [HarmonyPatch(typeof(ItemView), "UpdateStaticInfo")]
         private static class ViewInitPatch
         {
+            private static void Prefix(ItemView __instance)
+            {
+                try { PrepareFirstDisplay(__instance); }
+                catch (Exception e) { Warn(e); }
+            }
+
             private static void Postfix(ItemView __instance)
             {
                 RegisterView(__instance);
-                if (__instance.Item != null && !IsAmmo(__instance.Item))
-                {
-                    Quotes.GetOrCreateValue(__instance.Item).Dirty = true;
-                    PendingBackgrounds.Enqueue(__instance.Item);
-                }
                 __instance.UpdateColor();
+            }
+        }
+
+        [HarmonyPatch(typeof(EFT.ItemFactory), "CreateItem")]
+        private static class ItemCreatedPatch
+        {
+            private static void Postfix(Item __result)
+            {
+                if (pricingDepth == 0 && captureItems)
+                    PendingBackgrounds.Schedule(__result, true);
+            }
+        }
+
+        [HarmonyPatch(typeof(Item), "RaiseRefreshEvent")]
+        private static class ItemRefreshedPatch
+        {
+            private static void Prefix(Item __instance) { ItemChanged(__instance); }
+        }
+
+        [HarmonyPatch(typeof(Item), "set_CurrentAddress")]
+        private static class ItemMovedPatch
+        {
+            private static void Prefix(Item __instance) { ItemChanged(__instance); }
+            private static void Postfix(Item __instance) { ItemChanged(__instance); }
+        }
+
+        [HarmonyPatch(typeof(Item), "set_SpawnedInSession")]
+        private static class ItemFirPatch
+        {
+            private static void Postfix(Item __instance) { ItemChanged(__instance); }
+        }
+
+        [HarmonyPatch(typeof(EFT.GameWorld), "OnGameStarted")]
+        private static class RaidPreparedPatch
+        {
+            private static void Postfix()
+            {
+                PendingBackgrounds.ScheduleAll();
+                if (Log != null) Log.LogInfo("Raid item preparation scheduled: " + PendingBackgrounds.Count + " known instances.");
             }
         }
 
