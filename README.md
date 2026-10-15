@@ -4,7 +4,7 @@ Make inventory background tiers agree with Show Me The Money's main tooltip valu
 
 ## Release status
 
-On October 14, 2026, the user reported the latest version working as intended on two player clients connected to the same server. This is user-reported runtime validation; the exact tested package/hash, clean-install conditions and individual startup/post-raid/performance coverage were not recorded. The optimized release build and 97 policy assertions passed. Compatibility with other SPT/SMTM versions is not established.
+On October 14, 2026, the user reported the latest version working as intended on two player clients connected to the same server. The user also confirmed successful testing on a fresh SPT installation with the required dependencies. This is user-reported runtime validation; the exact tested package/hash and individual startup/post-raid/performance coverage were not independently recorded. The optimized release build and 97 policy assertions passed. Compatibility with other SPT/SMTM versions is not established.
 
 ## Requirements and deployment
 

@@ -4,7 +4,7 @@
 - Use Forge-compliant plugin display name FrostyJim-PriceColorSync; GUID/configuration path unchanged.
 - Request an SMTM price refresh on first main-menu entry and return from each observed raid.
 - Retry when the updater is not ready; recolor from replacement snapshots using the bounded queue.
-- User reports latest version working on two clients sharing a server; exact tested hash and clean-install coverage were not recorded.
+- User reports successful testing on two clients sharing a server and on a fresh SPT installation with required dependencies; exact tested hash and individual test coverage were not independently recorded.
 - Document the SMTM UseCaliberPenetrationPower requirement for penetration-based ammunition colors.
 
 ## 1.0.6 - 2026-10-14
