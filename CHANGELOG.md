@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1 - 2026-10-15
+
+- Fix repeated price invalidation during simulated inventory moves, swaps and drag previews, avoiding unnecessary repricing of unchanged assembled weapons and armor.
+- Preserve immediate price/color updates for actual item changes and affected assembly parents.
+- Restore preview suppression after nested operations and exceptions; temporary preview items do not enter the preparation queue.
+- Retain 1.1.0 advance preparation and existing FIR, case-only, ammunition and flea-ban pricing/color policies.
+- User confirms complex-item drag lag is gone and actual changes still update price/color immediately. Optimized build passes 154 assertions; standalone Harmony checks resolve 33 game targets and verify preview suppression, real mutations and exception recovery. No independent profiler benchmark, exhaustive mod-interaction coverage or fresh-install test of 1.1.1 is claimed.
+
+
 ## 1.1.0 - 2026-10-15
 
 - Prepare exact per-item valuations before inventories open, retaining condition, attachments and FIR status.

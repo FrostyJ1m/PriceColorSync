@@ -23,7 +23,7 @@ using SwiftXP.SPT.Common.Sessions;
 
 namespace SptDiagnostics.PriceColorSync
 {
-    [BepInPlugin("local.sptdiagnostics.pricecolorsync", "GPTSol6-1-PriceColorSync", "1.1.0")]
+    [BepInPlugin("local.sptdiagnostics.pricecolorsync", "GPTSol6-1-PriceColorSync", "1.1.1")]
     [BepInDependency("com.dark.spt.showmethemoney", "3.0.2")]
     [BepInIncompatibility("com.fika.headless")]
     public sealed class PriceColorSyncPlugin : BaseUnityPlugin
@@ -101,6 +101,7 @@ namespace SptDiagnostics.PriceColorSync
                 withinBackgroundBudget = delegate { return backgroundTimer.Elapsed.TotalMilliseconds < backgroundBudgetMs; };
                 harmony.PatchAll(typeof(PriceColorSyncPlugin).Assembly);
                 captureItems = true;
+                Logger.LogInfo("Inventory preview guard enabled: simulated operations preserve cached quotes.");
                 Logger.LogInfo("Pricing: FIR flea=" + fleaForFir + "; non-FIR flea=" + fleaForNonFir
                     + "; flea-banned trader=" + traderForBanned + ". FIR flea mode selects the higher flea/trader sell value. Shared price and tier for tooltip/background.");
                 Logger.LogInfo("Item preparation: maximum " + maximumBackgroundItems + " items/frame; " + backgroundBudgetMs + " ms budget. Exact cold quotes are calculated before first display.");
@@ -302,7 +303,7 @@ namespace SptDiagnostics.PriceColorSync
 
         private static void ItemChanged(Item item)
         {
-            if (pricingDepth != 0 || !captureItems || item == null) return;
+            if (pricingDepth != 0 || InventorySimulationScope.Active || !captureItems || item == null) return;
             PendingBackgrounds.Schedule(item, true);
             // Refresh weapon/armor parents when parts move or change condition. Storage
             // cases intentionally retain their shell-only quote when contents change.
@@ -323,7 +324,7 @@ namespace SptDiagnostics.PriceColorSync
 
         private static void PrepareFirstDisplay(ItemView view)
         {
-            if (view == null || view.Item == null || !view.Examined || !PricingReady) return;
+            if (InventorySimulationScope.Active || view == null || view.Item == null || !view.Examined || !PricingReady) return;
             if (IsAmmo(view.Item) && Settings.UseCaliberPenetrationPower.Value) return;
             Quote quote = Quotes.GetOrCreateValue(view.Item);
             if (!NeedsQuote(view.Item, quote, false)) return;
@@ -494,12 +495,45 @@ namespace SptDiagnostics.PriceColorSync
             }
         }
 
+        [HarmonyPatch]
+        private static class InventorySimulationPatch
+        {
+            private static IEnumerable<MethodBase> TargetMethods()
+            {
+                // Cover both UI dispatch overloads and direct synchronous operations
+                // (move/swap/split/apply helpers). Never patch open generic methods.
+                return new[] { typeof(ItemController), typeof(ItemManipulator) }
+                    .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic
+                        | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                    .Where(m => !m.ContainsGenericParameters
+                        && (m.DeclaringType == typeof(ItemManipulator) || m.Name == "ExecutePossibleAction")
+                        && m.ReturnType != typeof(void)
+                        && !typeof(System.Threading.Tasks.Task).IsAssignableFrom(m.ReturnType)
+                        && !typeof(System.Collections.IEnumerator).IsAssignableFrom(m.ReturnType)
+                        && m.GetParameters().Any(p => p.Name == "simulate" && p.ParameterType == typeof(bool)))
+                    .Cast<MethodBase>();
+            }
+
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(bool simulate, out InventorySimulationScope.State __state)
+            {
+                __state = InventorySimulationScope.Enter(simulate);
+            }
+
+            [HarmonyPriority(Priority.Last)]
+            private static void Finalizer(InventorySimulationScope.State __state)
+            {
+                // Finalizers run on success and exception; leave the game exception intact.
+                InventorySimulationScope.Exit(__state);
+            }
+        }
+
         [HarmonyPatch(typeof(EFT.ItemFactory), "CreateItem")]
         private static class ItemCreatedPatch
         {
             private static void Postfix(Item __result)
             {
-                if (pricingDepth == 0 && captureItems)
+                if (pricingDepth == 0 && !InventorySimulationScope.Active && captureItems)
                     PendingBackgrounds.Schedule(__result, true);
             }
         }

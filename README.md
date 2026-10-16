@@ -1,10 +1,10 @@
-# Price Color Sync 1.1.0
+# Price Color Sync 1.1.1
 
 Make inventory background tiers agree with Show Me The Money's main tooltip valuation. Player-client plugin for SPT 4.1.6 and Show Me The Money 3.0.2.
 
 ## Release status
 
-On October 15, 2026, the user confirmed that items were already colored as soon as an inventory opened and reported no noticeable frame loss with the installed 1.1.0 build. The optimized release build passes 140 assertions. Release source differs from the tested development source only in the Forge-required author-prefixed plugin display name; this metadata adjustment was not independently runtime-tested. No profiler benchmark, exhaustive mutation/Fika coverage or fresh-install test of 1.1.0 was recorded. Compatibility with other SPT/SMTM versions is not established.
+On October 15, 2026, the user confirmed that 1.1.1 removes the reported complex-item drag lag and preserves immediate price/color updates after actual item changes. The release source is identical to the tested local 1.1.1 source; the optimized build passes 154 assertions. Standalone Harmony checks resolve all 33 preview hook targets and verify suppression, real mutation delivery and exception recovery. No independent profiler benchmark, exhaustive mutation/mod-interaction/Fika coverage or fresh-install test of 1.1.1 was recorded. Compatibility with other SPT/SMTM versions is not established.
 
 ## Requirements and deployment
 
@@ -18,11 +18,13 @@ On October 15, 2026, the user confirmed that items were already colored as soon 
 1. Exit the player game client normally. Back up any older Price Color Sync DLL and configuration before updating.
 2. Extract the archive into the SPT game directory containing EscapeFromTarkov.exe. The result must be `BepInEx/plugins/SPT.Diagnostics.PriceColorSync.dll`.
 3. Keep only one copy of this plugin in the plugins tree. Start the client normally; configuration is generated automatically.
-4. Check `BepInEx/LogOutput.log` for `Loading [GPTSol6-1-PriceColorSync 1.1.0]` and any Price Color Sync initialization errors.
+4. Check `BepInEx/LogOutput.log` for `Loading [GPTSol6-1-PriceColorSync 1.1.1]` and any Price Color Sync initialization errors.
 
 To uninstall, exit the client, remove this DLL, and restart. Its optional config can also be removed. The archive does not replace SMTM, Item Valuation, game files, saved profiles, or server configuration.
 
 ## Pricing and colors
+
+- Version 1.1.1 keeps valid cached quotes during simulated inventory moves, swaps and drag previews. Actual item changes still invalidate the item and affected assembly parents. Nested previews and exceptions restore the prior suppression state.
 
 - Found-in-raid (FIR), flea-eligible items compare SMTM's cached flea estimate with its best trader sell-to value and use the higher valid rouble-per-slot quote, including configured tax/currency handling. Equal values keep flea. A missing or invalid quote falls back to the other valid source. Non-FIR and flea-banned items use the best available trader price by default.
 - Storage cases are priced as empty cases, excluding contents without changing the live inventory. Filled-case tooltips show `(case only)`.
@@ -69,7 +71,7 @@ Check `BepInEx/LogOutput.log` for initialization errors and Price Color Sync war
 
 For 1.0.7, verify `Automatic SMTM refresh requested: client startup` followed by `Automatic SMTM refresh: replacement price snapshot received.` Complete a raid and return to the main menu; expect a `return from raid` request and a replacement snapshot. Allow at least 30 seconds plus request time. A request message alone does not establish a successful fetch. Repeated ordinary menu navigation should not add automatic requests.
 
-Compare FIR/non-FIR ordinary items, banned items, ammo, filled/empty cases, damaged gear and a large stash. Check tooltip/background agreement, frame drops and new errors. A matching tier does not mean identical RGB palettes. Pure policy tests do not establish live compatibility or performance.
+Confirm `Inventory preview guard enabled` at startup. Rapidly drag assembled weapons/armor across empty and occupied cells, then make a real attachment or plate change and verify immediate price/color updates. Compare FIR/non-FIR ordinary items, banned items, ammo, filled/empty cases, damaged gear and a large stash. Check tooltip/background agreement, frame drops and new errors. A matching tier does not mean identical RGB palettes. Pure policy tests do not establish live compatibility or performance.
 
 ## Source, credits and AI disclosure
 

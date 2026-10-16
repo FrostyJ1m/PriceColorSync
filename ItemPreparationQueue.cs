@@ -23,7 +23,7 @@ namespace SptDiagnostics.PriceColorSync
 
         public void Schedule(T item, bool changed)
         {
-            if (item == null) return;
+            if (item == null || InventorySimulationScope.Active) return;
             lock (gate)
             {
                 Entry entry;
