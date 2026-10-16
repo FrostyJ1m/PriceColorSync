@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.2 - 2026-10-16
+
+- Add labeled base damage and penetration above SMTM hover prices for ammunition and populated cartridge packs. No Item Valuation installation is required for these stats.
+- Add a default-on `[Tooltip] Show ammo damage and penetration` setting in the Price Color Sync config. Numeric stats work independently of SMTM's penetration-color setting. Restart the player client after changing it.
+- Skip empty packs and non-ammo items. Avoid duplicating matching `[damage/penetration]` name suffixes; outdated suffixes do not hide current stats. Repeated price refreshes replace the stats block without accumulating lines.
+- Retain 1.1.1 drag-preview improvements and existing pricing, background, case and flea-ban policies. SMTM's existing tooltip visibility requirements still apply.
+- User confirms the installed 1.1.2 works; supplied screenshot shows 4.6x30mm AP SX with Damage: 35, Penetration: 53 and the existing trader price. Optimized build passes 166 assertions, including 1,000 simulated tooltip refreshes. No exhaustive mod-interaction, cartridge-pack or Fika runtime coverage is claimed.
+
+
 ## 1.1.1 - 2026-10-15
 
 - Fix repeated price invalidation during simulated inventory moves, swaps and drag previews, avoiding unnecessary repricing of unchanged assembled weapons and armor.

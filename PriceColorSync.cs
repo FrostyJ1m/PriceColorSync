@@ -23,7 +23,7 @@ using SwiftXP.SPT.Common.Sessions;
 
 namespace SptDiagnostics.PriceColorSync
 {
-    [BepInPlugin("local.sptdiagnostics.pricecolorsync", "GPTSol6-1-PriceColorSync", "1.1.1")]
+    [BepInPlugin("local.sptdiagnostics.pricecolorsync", "GPTSol6-1-PriceColorSync", "1.1.2")]
     [BepInDependency("com.dark.spt.showmethemoney", "3.0.2")]
     [BepInIncompatibility("com.fika.headless")]
     public sealed class PriceColorSyncPlugin : BaseUnityPlugin
@@ -46,6 +46,7 @@ namespace SptDiagnostics.PriceColorSync
         private static bool fleaForFir;
         private static bool fleaForNonFir;
         private static bool traderForBanned;
+        private static bool showAmmoStats;
         [ThreadStatic] private static int pricingDepth;
         private static volatile bool captureItems;
         private static int valuationEpoch;
@@ -82,6 +83,8 @@ namespace SptDiagnostics.PriceColorSync
                     "Use flea estimates even for non-FIR items. False uses best trader prices. Restart the client after changing.").Value;
                 traderForBanned = Config.Bind("Pricing", "Use trader prices for flea-banned items", true,
                     "Override both FIR rules for items that cannot be sold on the flea market. Cases check only the case itself. False permits cached market estimates. Restart the client after changing.").Value;
+                showAmmoStats = Config.Bind("Tooltip", "Show ammo damage and penetration", true,
+                    "Add base damage and penetration to SMTM hover prices for ammo and populated cartridge packs. Independent of penetration coloring. Matching name stats are not duplicated. Restart the client after changing.").Value;
                 maximumBackgroundItems = Config.Bind("Performance", "Maximum items per frame", 12,
                     new ConfigDescription("Maximum item quotes prepared ahead of display per frame. Cold first-display quotes run synchronously outside this limit. Restart the client after changing.",
                         new AcceptableValueRange<int>(1, 64))).Value;
@@ -605,6 +608,19 @@ namespace SptDiagnostics.PriceColorSync
             private static bool Prefix(Item __0, ref StringBuilder __1, ref double? __2)
             {
                 __2 = null;
+                // Keep stats in SMTM's replaceable price block so refreshes cannot
+                // accumulate lines. A stats failure must not prevent price rendering.
+                if (showAmmoStats)
+                {
+                    try
+                    {
+                        Ammo ammo = __0 as Ammo;
+                        AmmoBox box = __0 as AmmoBox;
+                        if (box != null) ammo = box.Cartridges.Items.OfType<Ammo>().FirstOrDefault();
+                        if (ammo != null) AmmoTooltipStats.Append(__1, EFT.LocalizationExtensions.LocalizedName(__0), ammo.Damage, ammo.PenetrationPower);
+                    }
+                    catch (Exception e) { Warn(e); }
+                }
                 try
                 {
                     Quote quote = GetQuote(__0, true);

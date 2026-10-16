@@ -1,10 +1,10 @@
-# Price Color Sync 1.1.1
+# Price Color Sync 1.1.2
 
 Make inventory background tiers agree with Show Me The Money's main tooltip valuation. Player-client plugin for SPT 4.1.6 and Show Me The Money 3.0.2.
 
 ## Release status
 
-On October 15, 2026, the user confirmed that 1.1.1 removes the reported complex-item drag lag and preserves immediate price/color updates after actual item changes. The release source is identical to the tested local 1.1.1 source; the optimized build passes 154 assertions. Standalone Harmony checks resolve all 33 preview hook targets and verify suppression, real mutation delivery and exception recovery. No independent profiler benchmark, exhaustive mutation/mod-interaction/Fika coverage or fresh-install test of 1.1.1 was recorded. Compatibility with other SPT/SMTM versions is not established.
+On October 16, 2026, the user confirmed that installed 1.1.2 works and supplied a screenshot of 4.6x30mm AP SX showing Damage: 35, Penetration: 53 and the existing trader price. The optimized build passes 166 assertions, including 1,000 simulated tooltip refreshes. This validates the reported loose-ammo display; exhaustive cartridge-pack, mod-interaction and Fika runtime coverage is not claimed. The 1.1.1 drag-preview fixes are retained.
 
 ## Requirements and deployment
 
@@ -18,7 +18,7 @@ On October 15, 2026, the user confirmed that 1.1.1 removes the reported complex-
 1. Exit the player game client normally. Back up any older Price Color Sync DLL and configuration before updating.
 2. Extract the archive into the SPT game directory containing EscapeFromTarkov.exe. The result must be `BepInEx/plugins/SPT.Diagnostics.PriceColorSync.dll`.
 3. Keep only one copy of this plugin in the plugins tree. Start the client normally; configuration is generated automatically.
-4. Check `BepInEx/LogOutput.log` for `Loading [GPTSol6-1-PriceColorSync 1.1.1]` and any Price Color Sync initialization errors.
+4. Check `BepInEx/LogOutput.log` for `Loading [GPTSol6-1-PriceColorSync 1.1.2]` and any Price Color Sync initialization errors.
 
 To uninstall, exit the client, remove this DLL, and restart. Its optional config can also be removed. The archive does not replace SMTM, Item Valuation, game files, saved profiles, or server configuration.
 
@@ -36,6 +36,12 @@ To uninstall, exit the client, remove this DLL, and restart. Its optional config
 
 SMTM optional weapon-mod/armor-plate breakdown lines retain their original calculations. Item Valuation's static backend description strings remain historical template estimates and may differ. This mod does not change actual buy/sell prices or sale eligibility.
 
+## Ammo tooltip stats
+
+Version 1.1.2 adds `Damage: 35 | Penetration: 53` (example values) above SMTM prices for examined ammunition and populated cartridge packs. Values come from the current round template. Damage is the base per-projectile value, not damage after armor/range or a summed shotgun blast. Empty packs and storage ammo cases get no stats line. Matching rich-text `[damage/penetration]` name suffixes suppress the extra line; stale suffixes do not hide current values. Price refreshes replace the whole block, avoiding repeated lines.
+
+SMTM's enabled, examination, ownership and valid-price requirements still govern visibility; this does not add trader-stock tooltips or standalone stats while SMTM is disabled. Item Valuation is not needed to generate these stats. No server locale or item-name changes are made.
+
 ## Configuration
 
 **For penetration-based ammo coloring, enable Show Me The Money's ammo penetration color setting (`UseCaliberPenetrationPower`).** With it disabled, ammunition backgrounds and tooltip colors use price tiers instead.
@@ -48,12 +54,15 @@ Use flea estimates for FIR items = true
 Use flea estimates for non-FIR items = false
 Use trader prices for flea-banned items = true
 
+[Tooltip]
+Show ammo damage and penetration = true
+
 [Performance]
 Maximum items per frame = 12
 Background work budget milliseconds = 2
 ```
 
-Use flea estimates for FIR items enables higher-of-flea/trader selection. A trader winner still refreshes when flea snapshots change. The flea-ban override takes precedence over both FIR options. Set both flea-estimate options false for trader-only pricing. Background tier RGB colors and the flea-ban marker are configurable in this file.
+Show ammo damage and penetration controls numeric stats independently of penetration coloring; restart after changing it. Use flea estimates for FIR items enables higher-of-flea/trader selection. A trader winner still refreshes when flea snapshots change. The flea-ban override takes precedence over both FIR options. Set both flea-estimate options false for trader-only pricing. Background tier RGB colors and the flea-ban marker are configurable in this file.
 
 SMTM's `BepInEx/config/com.dark.spt.showmethemoney.cfg` controls shared price/penetration thresholds, penetration mode, tooltip colors, trader exclusions, conversion/tax settings, and normal market refresh behavior. SMTM's dual-price and Always show flea price options do not override this plugin's single selected source.
 

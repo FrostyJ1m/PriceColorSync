@@ -20,6 +20,7 @@ $references = @(
 $compilerArgs = @('/nologo','/target:library','/optimize+',('/out:' + (Join-Path $outputDir 'SPT.Diagnostics.PriceColorSync.dll')))
 $compilerArgs += $references | ForEach-Object { '/reference:' + $_ }
 $compilerArgs += (Join-Path $projectDir 'InventorySimulationScope.cs')
+$compilerArgs += (Join-Path $projectDir 'AmmoTooltipStats.cs')
 $compilerArgs += @((Join-Path $projectDir 'TierPolicy.cs'), (Join-Path $projectDir 'BackgroundWorkQueue.cs'), (Join-Path $projectDir 'ItemPreparationQueue.cs'), (Join-Path $projectDir 'MenuRefreshPolicy.cs'), (Join-Path $projectDir 'PriceColorSync.cs'))
 & $compilerPath @compilerArgs
 if ($LASTEXITCODE -ne 0) { throw 'Plugin compilation failed' }
@@ -39,3 +40,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Item preparation tests failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Inventory simulation test compilation failed' }
 & (Join-Path $outputDir 'InventorySimulationTests.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Inventory simulation tests failed' }
+& $compilerPath /nologo /target:exe (('/out:' + (Join-Path $outputDir 'AmmoTooltipStatsTests.exe'))) (Join-Path $projectDir 'AmmoTooltipStats.cs') (Join-Path $projectDir 'AmmoTooltipStatsTests.cs')
+if ($LASTEXITCODE -ne 0) { throw 'Ammo tooltip test compilation failed' }
+& (Join-Path $outputDir 'AmmoTooltipStatsTests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'Ammo tooltip tests failed' }
