@@ -23,7 +23,7 @@ using SwiftXP.SPT.Common.Sessions;
 
 namespace SptDiagnostics.PriceColorSync
 {
-    [BepInPlugin("local.sptdiagnostics.pricecolorsync", "GPTSol6-1-PriceColorSync", "1.1.2")]
+    [BepInPlugin("local.sptdiagnostics.pricecolorsync", "GPTSol6-1-PriceColorSync", "1.1.4")]
     [BepInDependency("com.dark.spt.showmethemoney", "3.0.2")]
     [BepInIncompatibility("com.fika.headless")]
     public sealed class PriceColorSyncPlugin : BaseUnityPlugin
@@ -388,9 +388,11 @@ namespace SptDiagnostics.PriceColorSync
                     if (result.Trade.FleaPrice == null && !result.FleaEligible)
                         EstimateBannedFleaItem(result.Trade);
                     result.Price = result.Trade.FleaPrice;
+                    // Cache the competing offer for both FIR and optional non-FIR
+                    // flea tooltips. Only FIR mode selects the higher valuation.
+                    TraderPriceService.Instance.GetBestTraderPrice(result.Trade);
                     if (result.Fir)
                     {
-                        TraderPriceService.Instance.GetBestTraderPrice(result.Trade);
                         if (TierPolicy.PreferTrader(ComparePrice(result.Price), ComparePrice(result.Trade.TraderPrice)))
                         {
                             result.Price = result.Trade.TraderPrice;
@@ -629,9 +631,22 @@ namespace SptDiagnostics.PriceColorSync
                     __1.Append("<br>").Append(quote.UsesFlea ? "Flea estimate unavailable" : "Trader sell price unavailable");
                     else
                     {
-                        ShowPrice.Invoke(null, new object[] { quote.Trade, quote.Price, null, __1, quote.UsesFlea && __0 is Weapon });
-                        if (!quote.FleaEligible) __1.Append(quote.UsesFlea ? " (estimate; flea banned)" : " (flea banned; trader price)");
-                        if (IsStorageCase(__0)) __1.Append(" (case only)");
+                        // Retain both cached offers. SMTM compares the third argument
+                        // to highlight the better offer; null means no competing quote.
+                        TradePrice trader = ComparePrice(quote.Trade.TraderPrice).HasValue ? quote.Trade.TraderPrice : null;
+                        TradePrice flea = ComparePrice(quote.Trade.FleaPrice).HasValue ? quote.Trade.FleaPrice : null;
+                        if (trader != null)
+                        {
+                            ShowPrice.Invoke(null, new object[] { quote.Trade, trader, flea, __1, false });
+                            if (!quote.FleaEligible) __1.Append(" (flea banned; trader price)");
+                            if (IsStorageCase(__0)) __1.Append(" (case only)");
+                        }
+                        if (flea != null)
+                        {
+                            ShowPrice.Invoke(null, new object[] { quote.Trade, flea, trader, __1, __0 is Weapon });
+                            if (!quote.FleaEligible) __1.Append(" (estimate; flea banned)");
+                            if (IsStorageCase(__0)) __1.Append(" (case only)");
+                        }
                     }
                     RefreshItemViews(__0, quote);
                 }

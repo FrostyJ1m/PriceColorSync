@@ -1,95 +1,72 @@
-# Price Color Sync 1.1.2
+# Price Color Sync 1.1.4
 
-Make inventory background tiers agree with Show Me The Money's main tooltip valuation. Player-client plugin for SPT 4.1.6 and Show Me The Money 3.0.2.
+Price Color Sync is a player-client plugin for **SPT 4.1.6 + Show Me The Money 3.0.2**. It makes inventory background tiers and the main SMTM tooltip use the same item valuation, with trader/flea comparison and optional ammo stats.
 
-## Release status
+## Choose your pricing rules — built-in configuration
 
-On October 16, 2026, the user confirmed that installed 1.1.2 works and supplied a screenshot of 4.6x30mm AP SX showing Damage: 35, Penetration: 53 and the existing trader price. The optimized build passes 166 assertions, including 1,000 simulated tooltip refreshes. This validates the reported loose-ammo display; exhaustive cartridge-pack, mod-interaction and Fika runtime coverage is not claimed. The 1.1.1 drag-preview fixes are retained.
+**Price Color Sync includes its own configuration. The defaults are only one way to use it: these settings change which price drives item coloring and which prices appear in the tooltip.**
 
-## Requirements and deployment
+After the first launch, close the game and edit **`BepInEx/config/local.sptdiagnostics.pricecolorsync.cfg`**, then restart the player client. Pricing and tooltip options are read at startup.
 
-- SPT 4.1.6 with its supplied BepInEx installation (inspected loader: 5.4.23.5).
-- Show Me The Money 3.0.2, installed according to its own client/server instructions. This plugin calls internal SMTM APIs; newer versions are not automatically compatible.
-- Designed alongside Item Valuation 2.1.0. Item Valuation is not a declared BepInEx dependency; its backend description text is outside this plugin's scope.
-- Install this plugin only on each player's game client. No Price Color Sync server or Fika headless installation is needed. The plugin explicitly rejects the Fika headless plugin. Fika multiplayer compatibility has not been independently certified for this release.
+| Setting in `[Pricing]` | Default | What it does |
+| --- | --- | --- |
+| `Use flea estimates for FIR items` | `true` | For found-in-raid items, show both available trader/flea prices and use the **higher valid value** for valuation and coloring. Set `false` for trader-only pricing and display. |
+| `Use flea estimates for non-FIR items` | `false` | By default, non-FIR items use and show the best trader price. Set `true` to show both available prices while using the **flea estimate** for valuation and coloring, even if the trader offer is higher. |
+| `Use trader prices for flea-banned items` | `true` | Overrides both rules above: flea-banned items use and show trader prices. Set `false` to allow cached flea estimates when the applicable FIR/non-FIR flea option is also enabled. Estimates may be unavailable. |
 
-## Install and remove
+**Common setups:**
 
-1. Exit the player game client normally. Back up any older Price Color Sync DLL and configuration before updating.
-2. Extract the archive into the SPT game directory containing EscapeFromTarkov.exe. The result must be `BepInEx/plugins/SPT.Diagnostics.PriceColorSync.dll`.
-3. Keep only one copy of this plugin in the plugins tree. Start the client normally; configuration is generated automatically.
-4. Check `BepInEx/LogOutput.log` for `Loading [GPTSol6-1-PriceColorSync 1.1.2]` and any Price Color Sync initialization errors.
+- **Default:** FIR items use the higher trader/flea value; non-FIR and flea-banned items use trader prices.
+- **Show flea estimates on non-FIR items:** enable `Use flea estimates for non-FIR items`. Both available prices appear; the non-FIR color follows flea. FIR items still follow their separate higher-value rule.
+- **Trader-only for everything:** disable both `Use flea estimates for FIR items` and `Use flea estimates for non-FIR items`.
 
-To uninstall, exit the client, remove this DLL, and restart. Its optional config can also be removed. The archive does not replace SMTM, Item Valuation, game files, saved profiles, or server configuration.
+These are estimates for display. Enabling a flea estimate does **not** make an item sellable or change transaction prices. In dual-price tooltips, SMTM highlights the higher offer; in optional non-FIR flea mode that highlight can differ from the flea value selected for coloring. Missing/invalid offers are omitted; equal offers retain SMTM's tie behavior.
 
-## Pricing and colors
+## More configuration options
 
-- Version 1.1.1 keeps valid cached quotes during simulated inventory moves, swaps and drag previews. Actual item changes still invalidate the item and affected assembly parents. Nested previews and exceptions restore the prior suppression state.
+| Section / setting | Default | Effect |
+| --- | --- | --- |
+| `[Tooltip] Show ammo damage and penetration` | `true` | Adds labeled base damage and penetration above hover prices for ammo and populated cartridge packs. Set `false` to hide those numeric stats. Independent of penetration coloring; Item Valuation is not required. |
+| `[Background palette] Tier 0` through `Tier 5` | Six dark RGB colors | Customize inventory backgrounds from poor to legendary without changing SMTM's tooltip text palette. |
+| `[Background palette] Flea banned` | `#660415` | Customize the red background marker for flea-banned templates. This marker is independent of price tiers; ammo and cartridge packs are exempt. |
+| `[Performance] Maximum items per frame` | `12` | Caps advance quote preparation per frame; range 1–64. |
+| `[Performance] Background work budget milliseconds` | `2` | Time budget for advance preparation, checked between items; range 0.25–10 ms. One expensive item may exceed it, and cold first-display quotes run outside this budget. |
 
-- Found-in-raid (FIR), flea-eligible items compare SMTM's cached flea estimate with its best trader sell-to value and use the higher valid rouble-per-slot quote, including configured tax/currency handling. Equal values keep flea. A missing or invalid quote falls back to the other valid source. Non-FIR and flea-banned items use the best available trader price by default.
-- Storage cases are priced as empty cases, excluding contents without changing the live inventory. Filled-case tooltips show `(case only)`.
-- Background and main tooltip share a cached item valuation and tier. Price-per-slot tiers default to 5,000 / 10,000 / 15,000 / 25,000 / 35,000 roubles through SMTM settings.
-- Ammunition and populated cartridge packs use SMTM's penetration tiers when enabled. Disable that SMTM option to use price tiers. Empty cartridge packs use a neutral background when no penetration sample exists.
-- Flea-banned templates have a red background, independently of tooltip price tiers. Ammunition and cartridge packs are exempt from this red marker; storage ammo cases are not.
-- Background colors are dark; SMTM tooltip colors remain independent. When neither eligible quote is valid, valuation remains unavailable with a neutral background.
-- Exact item quotes are prepared before UI display using the item/time queue. Creation, movement, refresh and FIR changes schedule work; replacement market snapshots and startup/post-raid refreshes reschedule known items. Valid quotes survive view recreation. An examined cold/stale item is priced before its first color draw. Selection/highlight effects can temporarily override normal backgrounds.
+**Ammo colors are controlled by Show Me The Money:** enable its `UseCaliberPenetrationPower` setting for penetration tiers; disable it for price tiers. SMTM's own config supplies shared tier thresholds, tooltip text colors, trader exclusions and currency/tax handling. Price Color Sync's pricing rules govern quote selection and comparison display; SMTM's own dual-price / Always show flea price options do not override them. Restart after editing Price Color Sync settings.
 
-SMTM optional weapon-mod/armor-plate breakdown lines retain their original calculations. Item Valuation's static backend description strings remain historical template estimates and may differ. This mod does not change actual buy/sell prices or sale eligibility.
+## Features
 
-## Ammo tooltip stats
+- Version 1.1.4 displays both available trader and flea offers in flea-enabled modes, including non-FIR items. SMTM's formatter highlights the better offer. The user confirmed non-FIR mode works with the option both enabled and disabled.
+- Filled storage cases are valued as empty cases, excluding contents; tooltip rows are labeled `(case only)`. The live case and its contents are not changed.
+- Ammo and populated cartridge packs can show `Damage: 35 | Penetration: 53` (example values). Damage is base per-projectile damage. Empty packs are skipped; matching name stats are not duplicated. SMTM's normal tooltip visibility requirements still apply.
+- Exact per-item quotes are prepared before inventories open and reused when views reopen. Actual item changes and price refreshes schedule new work. Simulated inventory moves/swaps retain cached quotes, avoiding repeated repricing during drag previews.
+- Startup and post-raid main-menu refreshes use SMTM's existing price updater.
 
-Version 1.1.2 adds `Damage: 35 | Penetration: 53` (example values) above SMTM prices for examined ammunition and populated cartridge packs. Values come from the current round template. Damage is the base per-projectile value, not damage after armor/range or a summed shotgun blast. Empty packs and storage ammo cases get no stats line. Matching rich-text `[damage/penetration]` name suffixes suppress the extra line; stale suffixes do not hide current values. Price refreshes replace the whole block, avoiding repeated lines.
+## Requirements and installation
 
-SMTM's enabled, examination, ownership and valid-price requirements still govern visibility; this does not add trader-stock tooltips or standalone stats while SMTM is disabled. Item Valuation is not needed to generate these stats. No server locale or item-name changes are made.
+Requires **SPT 4.1.6** and **Show Me The Money 3.0.2** with its documented dependencies. Designed alongside Item Valuation 2.1.0; Item Valuation is not required for this plugin's ammo stats. Other SPT/SMTM versions and Fika multiplayer compatibility are unverified.
 
-## Configuration
+1. Close the player game client and back up the old plugin/configuration.
+2. Extract the release ZIP into the SPT game folder. The DLL must be at `BepInEx/plugins/SPT.Diagnostics.PriceColorSync.dll`.
+3. Keep one copy of this plugin. Install SMTM separately according to its instructions.
+4. Start the player client; configuration is generated automatically. Check `BepInEx/LogOutput.log` for loading and initialization errors.
+5. Choose your settings in the configuration file above with the game closed, then restart.
 
-**For penetration-based ammo coloring, enable Show Me The Money's ammo penetration color setting (`UseCaliberPenetrationPower`).** With it disabled, ammunition backgrounds and tooltip colors use price tiers instead.
+**Install only on player clients. No Price Color Sync backend or Fika headless installation is required.** To uninstall, close the client and remove this plugin DLL.
 
-Edit `BepInEx/config/local.sptdiagnostics.pricecolorsync.cfg` while the client is closed, then restart. Defaults:
+## Scope, refresh and validation
 
-```ini
-[Pricing]
-Use flea estimates for FIR items = true
-Use flea estimates for non-FIR items = false
-Use trader prices for flea-banned items = true
+Automatic refresh calls SMTM's existing `/showMeTheMoney/getFleaPrices` endpoint on your configured SPT backend. No separate external server or telemetry is added. Backend caching may return unchanged prices. There is no separate toggle for the added refresh triggers; removing this plugin stops them.
 
-[Tooltip]
-Show ammo damage and penetration = true
+SMTM optional weapon/armor breakdowns and Item Valuation static descriptions retain their original calculations. Actual transactions, saves and sale eligibility are unchanged. Missing trader/market data may prevent an offer. Cold/stale first-display pricing may still cause frame spikes; other mods that mutate items without observed notifications can leave quotes stale until refresh.
 
-[Performance]
-Maximum items per frame = 12
-Background work budget milliseconds = 2
-```
+On October 16, 2026, the user confirmed FIR dual-price display and tested non-FIR flea pricing both enabled and disabled successfully. The optimized build passes 166 existing assertions. This is not exhaustive mod-interaction, performance or Fika runtime coverage.
 
-Show ammo damage and penetration controls numeric stats independently of penetration coloring; restart after changing it. Use flea estimates for FIR items enables higher-of-flea/trader selection. A trader winner still refreshes when flea snapshots change. The flea-ban override takes precedence over both FIR options. Set both flea-estimate options false for trader-only pricing. Background tier RGB colors and the flea-ban marker are configurable in this file.
+MIT licensed. Credits to Show Me The Money, Item Valuation, SPT, BepInEx and Harmony. No game or third-party assemblies are bundled. Developed and documented with OpenAI Codex assistance. [Source and support](https://github.com/GPTSol6-1/PriceColorSync).
 
-SMTM's `BepInEx/config/com.dark.spt.showmethemoney.cfg` controls shared price/penetration thresholds, penetration mode, tooltip colors, trader exclusions, conversion/tax settings, and normal market refresh behavior. SMTM's dual-price and Always show flea price options do not override this plugin's single selected source.
 
-The work budget is checked between items; one expensive item can exceed it. Item cap accepts 1-64 and budget accepts 0.25-10 ms. These limits cover advance preparation, not total frame time. Synchronous cold/stale quotes at first display are outside this budget and can still cause a frame spike. Missing session/trader readiness or pricing data can delay or prevent a valid quote. Direct item changes made by another mod without the observed notifications may remain stale until tooltip refresh.
+## Build, troubleshooting and source
 
-## Automatic refresh and network behavior
+Check `BepInEx/LogOutput.log` for `Loading [GPTSol6-1-PriceColorSync 1.1.4]` and initialization errors. Report exact game, SMTM and plugin versions with relevant log excerpts; redact server addresses, session identifiers and credentials. Confirm the intended pricing options after restarting, and compare FIR/non-FIR, banned items and filled cases.
 
-Version 1.0.7 requests an SMTM refresh at the first usable main menu after launch and once after each observed raid when returning to the main menu. Ordinary stash/trader/settings navigation does not schedule another request.
-
-This calls SMTM's existing updater, which requests `/showMeTheMoney/getFleaPrices` from your configured SPT backend using SMTM's normal session/network implementation. There is no separate external update server or telemetry implemented by Price Color Sync. The plugin adds no independent network payload; requests use the existing SMTM/SPT protocol and authentication. SMTM's normal updater checks about every 30 seconds, and backend caching can return unchanged values. This does not force economy regeneration. There is currently no separate toggle for the added refresh requests; remove the plugin to stop these added triggers.
-
-## Troubleshooting and validation
-
-Check `BepInEx/LogOutput.log` for initialization errors and Price Color Sync warnings. A disabled plugin often indicates mismatched UI/SMTM internals. Report exact SPT, SMTM and plugin versions with relevant log excerpts; redact server addresses, session identifiers and credentials before sharing.
-
-For 1.0.7, verify `Automatic SMTM refresh requested: client startup` followed by `Automatic SMTM refresh: replacement price snapshot received.` Complete a raid and return to the main menu; expect a `return from raid` request and a replacement snapshot. Allow at least 30 seconds plus request time. A request message alone does not establish a successful fetch. Repeated ordinary menu navigation should not add automatic requests.
-
-Confirm `Inventory preview guard enabled` at startup. Rapidly drag assembled weapons/armor across empty and occupied cells, then make a real attachment or plate change and verify immediate price/color updates. Compare FIR/non-FIR ordinary items, banned items, ammo, filled/empty cases, damaged gear and a large stash. Check tooltip/background agreement, frame drops and new errors. A matching tier does not mean identical RGB palettes. Pure policy tests do not establish live compatibility or performance.
-
-## Source, credits and AI disclosure
-
-The companion source archive contains the plugin's original C# source, policy tests and Windows build script. It contains no game or third-party assemblies. Build instructions are in `BUILD.md`.
-
-Thanks to the Show Me The Money, Item Valuation, SPT, BepInEx and Harmony projects. Their code/binaries are not included in this release. Install dependencies from their original publishers.
-
-Development and documentation used OpenAI Codex assistance; earlier model IDs were not recorded in the workspace. Release preparation used OpenAI Codex (GPT-6). No generated art/audio is included.
-
-License: MIT, covering the original Price Color Sync code and documentation only. Dependency and game licenses remain separate.
-
-Source and support: https://github.com/GPTSol6-1/PriceColorSync and https://github.com/GPTSol6-1/PriceColorSync/issues. Forge listing: https://sp-mod.com/mod/3151/price-color-sync .
+The companion source archive contains original C# code, standalone tests and a Windows build script. See BUILD.md. No game or third-party assemblies are included. Development and documentation used OpenAI Codex assistance; earlier model IDs were not recorded. Release preparation used OpenAI Codex (GPT-6). No generated art/audio is included. License: MIT for original plugin code/documentation only; dependency and game licenses remain separate.

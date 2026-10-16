@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.4 - 2026-10-16
+
+- Restore trader/flea comparison in SMTM hover tooltips: show each valid offer using SMTM's original formatting, better-offer highlighting and price colors. Includes the previously local-only 1.1.3 tooltip update.
+- Fix the missing trader row when `Use flea estimates for non-FIR items` is enabled. Both available prices now appear, while non-FIR valuation/coloring still follow the configured flea estimate. FIR flea mode continues to select the higher valid offer.
+- Keep default non-FIR and flea-banned behavior trader-only. Preserve case-only valuation, ammo damage/penetration, refresh scheduling and inventory drag-preview improvements.
+- Expand the main description and included README with prominent pricing settings, defaults, mode examples, flea-ban precedence, ammo/color options and performance controls. Restart the client after changing Price Color Sync settings.
+- User confirmed FIR dual-price tooltips and tested non-FIR flea pricing enabled and disabled successfully. Optimized build passes all 166 existing assertions; exhaustive mod-interaction and Fika coverage is not claimed.
+
+
 ## 1.1.2 - 2026-10-16
 
 - Add labeled base damage and penetration above SMTM hover prices for ammunition and populated cartridge packs. No Item Valuation installation is required for these stats.
